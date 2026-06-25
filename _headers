@@ -1,0 +1,7 @@
+/*
+  Feature-Policy: bluetooth *
+  Permissions-Policy: bluetooth=(self)
+
+/sw.js
+  Cache-Control: max-age=0, no-cache, must-revalidate
+  Content-Type: application/javascript; charset=utf-8

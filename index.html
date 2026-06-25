@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سيارة ذكية - كشف أعطال</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0a0a">
+</head>
+<body>
+  <div class="container">
+    <h1>🚗 نظام تشخيص السيارة الذكي</h1>
+    <div class="card">
+      <button id="connectBtn" class="btn primary">🔵 اتصال بالسيارة</button>
+      <span id="status" class="status disconnected">غير متصل</span>
+    </div>
+
+    <div class="card">
+      <button id="readDtcBtn" class="btn" disabled>🔍 قراءة الأعطال</button>
+      <button id="liveDataBtn" class="btn" disabled>📊 بيانات حية (RPM)</button>
+    </div>
+
+    <div id="dtcList" class="results"></div>
+    <div id="liveValue" class="live"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
