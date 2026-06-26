@@ -2,7 +2,7 @@ let device, server, txCharacteristic;
 let obdCodes = {};
 
 // تحميل قاعدة بيانات الأعطال الموسعة
-fetch('obd_codes.json')
+fetch('obd_codes.json?v=1')
   .then(r => r.json())
   .then(data => obdCodes = data)
   .catch(() => alert('فشل تحميل قاعدة بيانات الأعطال'));
