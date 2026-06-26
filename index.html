@@ -104,5 +104,11 @@
   </div>
 
   <script src="app.js"></script>
+  <!-- Service Worker نشط لتطبيق TWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
 </body>
 </html>
