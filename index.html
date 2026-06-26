@@ -4,25 +4,58 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>OBD Pro | كشف أعطال السيارات</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a0d14">
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body>
+<body id="mainBody">
   <!-- شاشة التفعيل -->
   <div id="licenseModal" class="modal glass" style="display: flex;">
     <div class="modal-content">
-      <h3><i class="fas fa-key"></i> تفعيل التطبيق</h3>
-      <p>أدخل مفتاح الترخيص للاستمرار</p>
+      <h3><i class="fas fa-key"></i> <span data-translate="activateTitle">تفعيل التطبيق</span></h3>
+      <p data-translate="activateDesc">أدخل مفتاح الترخيص للاستمرار</p>
       <input type="text" id="licenseKeyInput" placeholder="مثال: OBD-XXXX-XXXX" style="width:100%;padding:12px;margin:10px 0;border-radius:10px;border:1px solid #444;background:#222;color:#fff;font-size:1rem;text-align:center;">
-      <button id="activateBtn" class="btn primary" style="width:100%;"><i class="fas fa-check-circle"></i> تفعيل</button>
-      <p id="licenseError" style="color: #ff5252; margin-top:10px; display:none;">مفتاح غير صحيح، حاول مرة أخرى</p>
+      <button id="activateBtn" class="btn primary" style="width:100%;"><i class="fas fa-check-circle"></i> <span data-translate="activateBtn">تفعيل</span></button>
+      <p id="licenseError" style="color: #ff5252; margin-top:10px; display:none;" data-translate="invalidKey">مفتاح غير صحيح، حاول مرة أخرى</p>
     </div>
   </div>
 
-  <!-- باقي واجهة التطبيق (لن تظهر إلا بعد التفعيل) -->
+  <!-- شاشة الترحيب (Onboarding) -->
+  <div id="onboardingModal" class="modal glass hidden" style="display: none;">
+    <div class="modal-content onboarding">
+      <div class="onboarding-slides" id="onboardingSlides">
+        <div class="onboarding-slide active" data-slide="1">
+          <i class="fas fa-car fa-3x" style="color: var(--accent-blue);"></i>
+          <h2 data-translate="onboarding1Title">افحص سيارتك بنفسك</h2>
+          <p data-translate="onboarding1Desc">اقرأ أعطال المحرك مباشرة من العقل الإلكتروني</p>
+        </div>
+        <div class="onboarding-slide" data-slide="2">
+          <i class="fas fa-search fa-3x" style="color: var(--accent-green);"></i>
+          <h2 data-translate="onboarding2Title">ابحث عن حلول فورية</h2>
+          <p data-translate="onboarding2Desc">اضغط على أي كود وابحث في الإنترنت عن أسبابه</p>
+        </div>
+        <div class="onboarding-slide" data-slide="3">
+          <i class="fas fa-wallet fa-3x" style="color: var(--accent-yellow);"></i>
+          <h2 data-translate="onboarding3Title">وفر وقتك ومالك</h2>
+          <p data-translate="onboarding3Desc">لا داعي لزيارة الميكانيكي قبل معرفة المشكلة</p>
+        </div>
+      </div>
+      <div class="onboarding-dots">
+        <span class="dot active" data-dot="1"></span>
+        <span class="dot" data-dot="2"></span>
+        <span class="dot" data-dot="3"></span>
+      </div>
+      <div class="onboarding-actions">
+        <button id="skipOnboarding" class="btn"><span data-translate="skip">تخطي</span></button>
+        <button id="nextOnboarding" class="btn primary"><span data-translate="next">التالي</span></button>
+        <button id="finishOnboarding" class="btn primary hidden"><span data-translate="start">ابدأ</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- التطبيق الرئيسي -->
   <div id="appContent" style="display: none;">
     <nav class="navbar glass">
       <div class="nav-brand">
@@ -31,18 +64,26 @@
       </div>
       <div class="nav-actions">
         <button id="refreshHistoryBtn" class="icon-btn" title="السجل"><i class="fas fa-history"></i></button>
+        <button id="settingsBtn" class="icon-btn" title="الإعدادات"><i class="fas fa-cog"></i></button>
       </div>
     </nav>
+
+    <!-- رسالة انقطاع البلوتوث -->
+    <div id="disconnectAlert" class="disconnect-alert hidden">
+      <i class="fas fa-exclamation-triangle"></i>
+      <span data-translate="disconnected">انقطع اتصال البلوتوث</span>
+      <button id="reconnectBtn" class="btn" data-translate="reconnect">إعادة الاتصال</button>
+    </div>
 
     <main class="container">
       <div class="dashboard glass">
         <div class="connection-card">
           <div class="status-indicator">
             <span id="ledIndicator" class="led offline"></span>
-            <span id="connectionText" class="status-text">غير متصل</span>
+            <span id="connectionText" class="status-text" data-translate="notConnected">غير متصل</span>
           </div>
           <button id="connectBtn" class="btn primary connect-btn">
-            <span>اتصال بالسيارة</span>
+            <span data-translate="connectBtn">اتصال بالسيارة</span>
           </button>
         </div>
         <div class="gauges">
@@ -58,7 +99,7 @@
             <div class="gauge-circle error-circle">
               <div class="gauge-inner">
                 <span id="dtcCount">0</span>
-                <small>خطأ</small>
+                <small data-translate="errorCount">خطأ</small>
               </div>
             </div>
           </div>
@@ -67,43 +108,79 @@
 
       <div class="action-buttons glass">
         <button id="readDtcBtn" class="btn action-btn" disabled>
-          <i class="fas fa-search"></i> <span>قراءة الأعطال</span>
+          <i class="fas fa-search"></i> <span data-translate="readDtc">قراءة الأعطال</span>
         </button>
         <button id="clearDtcBtn" class="btn action-btn clear-btn" disabled>
-          <i class="fas fa-eraser"></i> <span>مسح الأعطال</span>
+          <i class="fas fa-eraser"></i> <span data-translate="clearDtc">مسح الأعطال</span>
         </button>
         <button id="liveDataBtn" class="btn action-btn" disabled>
-          <i class="fas fa-tachometer-alt"></i> <span>بيانات حية</span>
+          <i class="fas fa-tachometer-alt"></i> <span data-translate="liveData">بيانات حية</span>
         </button>
+      </div>
+
+      <!-- مؤشر التقدم -->
+      <div id="loadingSpinner" class="loading-spinner glass hidden">
+        <i class="fas fa-spinner fa-pulse"></i> <span data-translate="loading">جاري قراءة الأعطال...</span>
       </div>
 
       <div id="dtcList" class="dtc-list"></div>
       <div id="noDtcMessage" class="no-dtc glass hidden">
         <i class="fas fa-check-circle" style="color: #00ff88; font-size: 3rem;"></i>
-        <p>لا توجد أعطال مخزنة في وحدة التحكم.</p>
+        <p data-translate="noDtc">لا توجد أعطال مخزنة في وحدة التحكم.</p>
       </div>
 
       <div id="liveDataPanel" class="live-panel glass hidden">
-        <h3><i class="fas fa-wave-square"></i> بيانات حية</h3>
+        <h3><i class="fas fa-wave-square"></i> <span data-translate="liveDataTitle">بيانات حية</span></h3>
         <div id="liveValues" class="live-values"></div>
       </div>
     </main>
 
     <div id="toastContainer" class="toast-container"></div>
 
+    <!-- مودال السجل -->
     <div id="historyModal" class="modal glass hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h3><i class="fas fa-history"></i> سجل الأعطال السابقة</h3>
+          <h3><i class="fas fa-history"></i> <span data-translate="historyTitle">سجل الأعطال السابقة</span></h3>
           <button class="close-btn" id="closeHistoryBtn">&times;</button>
         </div>
+        <button id="refreshHistoryListBtn" class="btn" style="margin-bottom:10px;"><i class="fas fa-sync-alt"></i> <span data-translate="refresh">تحديث</span></button>
         <div id="historyList" class="history-list"></div>
-        <button id="clearHistoryBtn" class="btn" style="margin-top: 15px; background: #c0392b;"><i class="fas fa-trash-alt"></i> مسح السجل</button>
+        <button id="clearHistoryBtn" class="btn" style="margin-top: 15px; background: #c0392b;"><i class="fas fa-trash-alt"></i> <span data-translate="clearHistory">مسح السجل</span></button>
+      </div>
+    </div>
+
+    <!-- مودال الإعدادات -->
+    <div id="settingsModal" class="modal glass hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-cog"></i> <span data-translate="settingsTitle">الإعدادات</span></h3>
+          <button class="close-btn" id="closeSettingsBtn">&times;</button>
+        </div>
+        <div class="settings-item">
+          <span data-translate="language">اللغة</span>
+          <select id="langSelect">
+            <option value="ar">العربية</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+        <div class="settings-item">
+          <span data-translate="deviceIdLabel">معرف الجهاز</span>
+          <span id="deviceIdDisplay" class="device-id-text"></span>
+        </div>
+        <div class="settings-item">
+          <span data-translate="darkMode">الوضع الليلي</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="darkModeToggle" checked>
+            <span class="slider round"></span>
+          </label>
+        </div>
+        <button id="exportReportBtn" class="btn primary" style="width:100%;"><i class="fas fa-share-alt"></i> <span data-translate="exportReport">تصدير تقرير الأعطال</span></button>
       </div>
     </div>
   </div>
 
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
