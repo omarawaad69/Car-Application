@@ -1,11 +1,10 @@
-// ========== قائمة مفاتيح الترخيص الصالحة ==========
-// أضف هنا المفاتيح التي تريد منحها للعملاء
+// ========== قائمة مفاتيح الترخيص (أضف المزيد كما تشاء) ==========
 const VALID_KEYS = [
   "OBD-1234-5678",
   "OBD-8765-4321",
-  "OBD-0000-0000" 
+  "OBD-0054-0080" 
   "OBD-1203-9252"
-  "ODB-1572-5484"// يمكنك إضافة المزيد
+  "ODB-1572-5484"
 ];
 
 // ========== دوال معرف الجهاز ==========
@@ -18,27 +17,21 @@ function getDeviceId() {
   return deviceId;
 }
 
-// ========== دوال التفعيل المحلي ==========
+// ========== التفعيل المحلي ==========
 function isLicenseActivated() {
   const licenseData = localStorage.getItem('licenseData');
   if (!licenseData) return false;
   try {
     const data = JSON.parse(licenseData);
-    // تحقق من أن المفتاح ما زال صالحاً وأنه مرتبط بهذا الجهاز
     return VALID_KEYS.includes(data.key) && data.deviceId === getDeviceId();
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 }
 
 function activateLicense(key) {
-  const deviceId = getDeviceId();
   if (!VALID_KEYS.includes(key)) {
     return { success: false, message: "مفتاح غير صحيح" };
   }
-  // تحقق مما إذا كان المفتاح مستخدماً على جهاز آخر
-  // نبحث في localStorage عن أي تفعيل سابق بهذا المفتاح (لن يحدث إلا إذا تم نسخ localStorage، وهذا صعب)
-  // عملياً، التفعيل يتم لمرة واحدة ويرتبط بالجهاز
+  const deviceId = getDeviceId();
   const licenseData = { key, deviceId };
   localStorage.setItem('licenseData', JSON.stringify(licenseData));
   localStorage.setItem('licenseActivated', 'true');
@@ -52,25 +45,39 @@ let connected = false;
 let currentRPM = 0;
 let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
-// ========== التحقق من التفعيل عند التحميل ==========
-if (isLicenseActivated()) {
-  showApp();
-} else {
-  document.getElementById('licenseModal').style.display = 'flex';
-}
+// ========== بدء التطبيق ==========
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('تم تحميل التطبيق بنجاح.');
 
-document.getElementById('activateBtn').addEventListener('click', () => {
-  const key = document.getElementById('licenseKeyInput').value.trim();
-  const errorEl = document.getElementById('licenseError');
-  if (!key) return;
-
-  const result = activateLicense(key);
-  if (result.success) {
+  // إخفاء شاشة التفعيل إذا كان مفعلاً مسبقاً
+  if (isLicenseActivated()) {
     document.getElementById('licenseModal').style.display = 'none';
     showApp();
   } else {
-    errorEl.textContent = result.message;
-    errorEl.style.display = 'block';
+    document.getElementById('licenseModal').style.display = 'flex';
+  }
+
+  // ربط زر التفعيل (مع فحص وجوده)
+  const activateBtn = document.getElementById('activateBtn');
+  if (activateBtn) {
+    activateBtn.addEventListener('click', function() {
+      const keyInput = document.getElementById('licenseKeyInput');
+      const errorEl = document.getElementById('licenseError');
+      if (!keyInput) return;
+      const key = keyInput.value.trim();
+      if (!key) return;
+
+      const result = activateLicense(key);
+      if (result.success) {
+        document.getElementById('licenseModal').style.display = 'none';
+        showApp();
+      } else {
+        errorEl.textContent = result.message;
+        errorEl.style.display = 'block';
+      }
+    });
+  } else {
+    console.error('زر التفعيل غير موجود!');
   }
 });
 
@@ -79,7 +86,7 @@ function showApp() {
   initApp();
 }
 
-// ========== باقي دوال التطبيق (بدون تغيير) ==========
+// ========== التطبيق الأساسي (بدون تغيير) ==========
 function initApp() {
   fetch('obd_codes.json')
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
