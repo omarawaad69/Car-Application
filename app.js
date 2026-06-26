@@ -1,5 +1,5 @@
 // ========== إعدادات التفعيل ==========
-const WORKER_URL = 'https://license-checker.اسمك.workers.dev/check-license'; // غيّر إلى رابط الـ Worker الخاص بك
+const WORKER_URL = 'https://license-checker.omarawaad69.workers.dev/check-license'; // غيّر إلى رابط الـ Worker الخاص بك
 
 // ========== المتغيرات العامة ==========
 let device, server, txCharacteristic;
