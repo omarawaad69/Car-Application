@@ -14,15 +14,15 @@
   <!-- شاشة التفعيل -->
   <div id="licenseModal" class="modal glass" style="display: flex;">
     <div class="modal-content">
-      <h3>تفعيل التطبيق</h3>
+      <h3><i class="fas fa-key"></i> تفعيل التطبيق</h3>
       <p>أدخل مفتاح الترخيص للاستمرار</p>
       <input type="text" id="licenseKeyInput" placeholder="مثال: OBD-XXXX-XXXX" style="width:100%;padding:12px;margin:10px 0;border-radius:10px;border:1px solid #444;background:#222;color:#fff;font-size:1rem;text-align:center;">
-      <button id="activateBtn" class="btn primary" style="width:100%;">تفعيل</button>
+      <button id="activateBtn" class="btn primary" style="width:100%;"><i class="fas fa-check-circle"></i> تفعيل</button>
       <p id="licenseError" style="color: #ff5252; margin-top:10px; display:none;">مفتاح غير صحيح، حاول مرة أخرى</p>
     </div>
   </div>
 
-  <!-- باقي واجهة التطبيق (لن تظهر إلا بعد التفعيل) -->
+  <!-- باقي واجهة التطبيق -->
   <div id="appContent" style="display: none;">
     <nav class="navbar glass">
       <div class="nav-brand">
@@ -42,7 +42,7 @@
             <span id="connectionText" class="status-text">غير متصل</span>
           </div>
           <button id="connectBtn" class="btn primary connect-btn">
-            <i class="fas fa-bluetooth"></i> اتصال بالسيارة
+            <i class="fas fa-bluetooth"></i> <span>اتصال بالسيارة</span>
           </button>
         </div>
         <div class="gauges">
@@ -67,13 +67,13 @@
 
       <div class="action-buttons glass">
         <button id="readDtcBtn" class="btn action-btn" disabled>
-          <i class="fas fa-search"></i> قراءة الأعطال
+          <i class="fas fa-search"></i> <span>قراءة الأعطال</span>
         </button>
         <button id="clearDtcBtn" class="btn action-btn clear-btn" disabled>
-          <i class="fas fa-eraser"></i> مسح الأعطال
+          <i class="fas fa-eraser"></i> <span>مسح الأعطال</span>
         </button>
         <button id="liveDataBtn" class="btn action-btn" disabled>
-          <i class="fas fa-tachometer-alt"></i> بيانات حية
+          <i class="fas fa-tachometer-alt"></i> <span>بيانات حية</span>
         </button>
       </div>
 
@@ -94,17 +94,16 @@
     <div id="historyModal" class="modal glass hidden">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>سجل الأعطال السابقة</h3>
+          <h3><i class="fas fa-history"></i> سجل الأعطال السابقة</h3>
           <button class="close-btn" id="closeHistoryBtn">&times;</button>
         </div>
         <div id="historyList" class="history-list"></div>
-        <button id="clearHistoryBtn" class="btn" style="margin-top: 15px; background: #c0392b;">مسح السجل</button>
+        <button id="clearHistoryBtn" class="btn" style="margin-top: 15px; background: #c0392b;"><i class="fas fa-trash-alt"></i> مسح السجل</button>
       </div>
     </div>
   </div>
 
   <script src="app.js"></script>
-  <!-- Service Worker نشط لتطبيق TWA -->
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js');
