@@ -1,5 +1,5 @@
 // ========== إعدادات التفعيل ==========
-const WORKER_URL = 'https://license-checker.omarawaad69.workers.dev/check-license'; // غيّر إلى رابط الـ Worker الخاص بك
+const WORKER_URL = 'https://license-checker.عمال.workers.dev/check-license'; // غيّر إلى رابط الـ Worker الخاص بك
 
 // ========== دوال معرف الجهاز ==========
 function getDeviceId() {
@@ -20,10 +20,15 @@ let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
 // ========== التحقق من التفعيل عند التحميل ==========
 if (localStorage.getItem('licenseActivated') === 'true') {
+  // التفعيل موجود مسبقًا، أخفِ واجهة التفعيل وأظهر التطبيق مباشرة
+  document.getElementById('licenseModal').style.display = 'none';
   showApp();
 } else {
+  // لم يتم التفعيل بعد، أظهر واجهة التفعيل
   document.getElementById('licenseModal').style.display = 'flex';
 }
+
+// ... يتبعه باقي الكود (دالة showApp و initApp وكل شيء)
 
 document.getElementById('activateBtn').addEventListener('click', async () => {
   const key = document.getElementById('licenseKeyInput').value.trim();
