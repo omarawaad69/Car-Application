@@ -1,5 +1,5 @@
 // ========== إعدادات التفعيل ==========
-const WORKER_URL = 'https://license-checker.عمال.workers.dev/check-license'; // غيّر إلى رابط الـ Worker الخاص بك
+const WORKER_URL = 'https://license-checker.omarawaad69.workers.dev/'; // غيّر إلى رابط الـ Worker الخاص بك
 
 // ========== دوال معرف الجهاز ==========
 function getDeviceId() {
