@@ -1,11 +1,14 @@
 let device, server, txCharacteristic;
 let obdCodes = {};
 
-// تحميل قاعدة بيانات الأعطال الموسعة
+// تحميل قاعدة بيانات الأعطال الموسعة مع إظهار تفاصيل الخطأ
 fetch('obd_codes.json?v=1')
-  .then(r => r.json())
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
   .then(data => obdCodes = data)
-  .catch(() => alert('فشل تحميل قاعدة بيانات الأعطال'));
+  .catch(err => alert('فشل تحميل قاعدة البيانات: ' + err.message));
 
 const connectBtn = document.getElementById('connectBtn');
 const readDtcBtn = document.getElementById('readDtcBtn');
@@ -137,27 +140,5 @@ connectBtn.addEventListener('click', connect);
 readDtcBtn.addEventListener('click', readDTCs);
 liveDataBtn.addEventListener('click', readLiveRPM);
 
-// ---------- آلية التحديث الصامت ----------
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(registration => {
-    registration.addEventListener('updatefound', () => {
-      const newWorker = registration.installing;
-      newWorker.addEventListener('statechange', () => {
-        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-          showUpdateBanner();
-        }
-      });
-    });
-  });
-}
-
-function showUpdateBanner() {
-  const banner = document.createElement('div');
-  banner.className = 'update-banner';
-  banner.innerHTML = '✨ تحديث جديد متوفر! جارٍ التحميل...';
-  document.body.prepend(banner);
-  setTimeout(() => {
-    navigator.serviceWorker.controller.postMessage('skipWaiting');
-    window.location.reload();
-  }, 1500);
-}
+// ---------- آلية التحديث الصامت (مُعطَّلة مؤقتاً) ----------
+// ستُفعَّل بعد حل المشكلة
