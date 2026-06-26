@@ -1,4 +1,5 @@
-const CACHE_NAME = 'obd-v2';  // يزيد هذا الرقم عند كل تحديث
+// إصدار جديد للكاش (تغيير الرقم يجبر على الحذف)
+const CACHE_NAME = 'obd-v3';
 const FILES_TO_CACHE = [
   '/',
   '/index.html',
@@ -7,22 +8,25 @@ const FILES_TO_CACHE = [
   '/obd_codes.json'
 ];
 
+// تثبيت الكاش الجديد
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => cache.addAll(FILES_TO_CACHE))
   );
+  // تخطي الانتظار والتفعيل فوراً
   self.skipWaiting();
 });
 
+// تفعيل: حذف كل الكاش القديم
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key)))
-    )
+    caches.keys().then(keys => Promise.all(
+      keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+    )).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
+// استراتيجية: Network First للصفحة الرئيسية، Cache First للباقي
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   if (url.pathname === '/' || url.pathname.endsWith('index.html')) {
@@ -56,9 +60,3 @@ async function cacheFirst(request) {
     return new Response('Offline', { status: 503 });
   }
 }
-
-self.addEventListener('message', event => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
-  }
-});
