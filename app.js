@@ -1,144 +1,203 @@
 let device, server, txCharacteristic;
 let obdCodes = {};
+let connected = false;
+let currentRPM = 0;
+let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
-// تحميل قاعدة بيانات الأعطال الموسعة مع إظهار تفاصيل الخطأ
-fetch('obd_codes.json?v=1')
-  .then(r => {
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.json();
-  })
+// تحميل قاعدة البيانات
+fetch('obd_codes.json')
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
   .then(data => obdCodes = data)
-  .catch(err => alert('فشل تحميل قاعدة البيانات: ' + err.message));
+  .catch(err => showToast('فشل تحميل قاعدة البيانات: ' + err.message, 'error'));
 
 const connectBtn = document.getElementById('connectBtn');
 const readDtcBtn = document.getElementById('readDtcBtn');
+const clearDtcBtn = document.getElementById('clearDtcBtn');
 const liveDataBtn = document.getElementById('liveDataBtn');
-const statusEl = document.getElementById('status');
+const led = document.getElementById('ledIndicator');
+const connText = document.getElementById('connectionText');
 const dtcList = document.getElementById('dtcList');
-const liveValue = document.getElementById('liveValue');
+const noDtcMsg = document.getElementById('noDtcMessage');
+const rpmValue = document.getElementById('rpmValue');
+const rpmGauge = document.getElementById('rpmGauge');
+const dtcCountEl = document.getElementById('dtcCount');
+const toastContainer = document.getElementById('toastContainer');
+const historyModal = document.getElementById('historyModal');
+const historyList = document.getElementById('historyList');
+const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+const liveDataPanel = document.getElementById('liveDataPanel');
+const liveValues = document.getElementById('liveValues');
 
-const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e'.toLowerCase();
-const TX_CHAR_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'.toLowerCase();
+const UART_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+const TX_CHAR = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 
+// Toast
+function showToast(msg, type = '') {
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  toastContainer.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3000);
+}
+
+// تحديث واجهة الاتصال
+function updateConnectionUI(active) {
+  connected = active;
+  if (active) {
+    led.className = 'led online';
+    connText.textContent = 'متصل';
+    readDtcBtn.disabled = false;
+    clearDtcBtn.disabled = false;
+    liveDataBtn.disabled = false;
+  } else {
+    led.className = 'led offline';
+    connText.textContent = 'غير متصل';
+    readDtcBtn.disabled = true;
+    clearDtcBtn.disabled = true;
+    liveDataBtn.disabled = true;
+  }
+}
+
+// الاتصال
 async function connect() {
   try {
     device = await navigator.bluetooth.requestDevice({
       filters: [{ namePrefix: 'V' }, { namePrefix: 'OBD' }, { namePrefix: 'ELM' }],
-      optionalServices: [UART_SERVICE_UUID, '0000ffe0-0000-1000-8000-00805f9b34fb']
+      optionalServices: [UART_SERVICE, '0000ffe0-0000-1000-8000-00805f9b34fb']
     });
     server = await device.gatt.connect();
-    let service;
-    try {
-      service = await server.getPrimaryService(UART_SERVICE_UUID);
-    } catch {
-      service = await server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb');
-    }
-    txCharacteristic = await service.getCharacteristic(TX_CHAR_UUID);
+    let service = await server.getPrimaryService(UART_SERVICE).catch(() => server.getPrimaryService('0000ffe0-0000-1000-8000-00805f9b34fb'));
+    txCharacteristic = await service.getCharacteristic(TX_CHAR);
     await txCharacteristic.startNotifications();
     txCharacteristic.addEventListener('characteristicvaluechanged', handleOBDResponse);
-    statusEl.textContent = 'متصل';
-    statusEl.className = 'status connected';
-    readDtcBtn.disabled = false;
-    liveDataBtn.disabled = false;
-    await sendOBDCommand('ATZ\r');
-    await delay(1000);
-    await sendOBDCommand('ATE0\r');
-    await sendOBDCommand('ATSP0\r');
+    updateConnectionUI(true);
+    showToast('تم الاتصال بـ ' + device.name, 'success');
+    await sendCmd('ATZ\r'); await delay(800);
+    await sendCmd('ATE0\r'); await sendCmd('ATSP0\r');
   } catch (err) {
-    alert('فشل الاتصال: ' + err);
+    showToast('فشل الاتصال: ' + err.message, 'error');
+    updateConnectionUI(false);
   }
 }
 
 function handleOBDResponse(event) {
-  const value = event.target.value;
-  let text = new TextDecoder().decode(value);
-  if (text.includes('43')) {
-    parseDTCs(text);
-  } else if (text.includes('41 0C')) {
-    parseRPM(text);
-  }
+  let text = new TextDecoder().decode(event.target.value);
+  if (text.includes('43')) parseDTCs(text);
+  else if (text.includes('41 0C')) parseRPM(text);
 }
 
-async function sendOBDCommand(cmd) {
-  const encoder = new TextEncoder();
-  await txCharacteristic.writeValue(encoder.encode(cmd));
+async function sendCmd(cmd) {
+  if (!txCharacteristic) return;
+  await txCharacteristic.writeValue(new TextEncoder().encode(cmd));
 }
 
 async function readDTCs() {
-  dtcList.innerHTML = '... جاري القراءة';
-  await sendOBDCommand('03\r');
+  dtcList.innerHTML = '';
+  noDtcMsg.classList.add('hidden');
+  showToast('جاري قراءة الأعطال...');
+  await sendCmd('03\r');
 }
 
-async function readLiveRPM() {
-  await sendOBDCommand('01 0C\r');
+async function clearDTCs() {
+  if (!confirm('هل أنت متأكد من مسح جميع الأعطال المخزنة؟')) return;
+  await sendCmd('04\r');
+  showToast('تم إرسال أمر مسح الأعطال', 'success');
+  dtcList.innerHTML = '';
+  noDtcMsg.classList.remove('hidden');
+  dtcCountEl.textContent = '0';
+}
+
+async function readLiveData() {
+  liveDataPanel.classList.toggle('hidden');
+  if (!liveDataPanel.classList.contains('hidden')) {
+    await sendCmd('01 0C\r');
+  }
 }
 
 function parseDTCs(response) {
   const lines = response.split('\r').filter(l => l.startsWith('43'));
-  let hexCodes = '';
-  lines.forEach(line => {
-    const parts = line.replace('>', '').trim().split(' ');
-    hexCodes += parts.slice(1).join('').substring(0, parts.length*2);
-  });
+  let hex = '';
+  lines.forEach(l => { const p = l.replace('>','').trim().split(' '); hex += p.slice(1).join('').substring(0, p.length*2); });
   let dtcs = [];
-  for (let i = 0; i < hexCodes.length; i += 4) {
-    let code = hexCodes.substring(i, i+4);
-    if (code === '0000') continue;
-    dtcs.push(decodeDTC(code));
+  for (let i = 0; i < hex.length; i+=4) {
+    let c = hex.substring(i,i+4);
+    if (c !== '0000') dtcs.push(decodeDTC(c));
   }
   displayDTCs(dtcs);
 }
 
 function decodeDTC(hex) {
-  const bytes = [hex.substring(0,2), hex.substring(2,4)];
-  let firstChar = 'P';
-  const fb = parseInt(bytes[0], 16);
-  if ((fb & 0xC0) === 0) firstChar = 'P';
-  else if ((fb & 0xC0) === 0x40) firstChar = 'C';
-  else if ((fb & 0xC0) === 0x80) firstChar = 'B';
-  else if ((fb & 0xC0) === 0xC0) firstChar = 'U';
-  let d1 = (fb >> 4) & 0x03;
-  let d2 = fb & 0x0F;
-  return firstChar + d1 + d2 + bytes[1];
+  let fb = parseInt(hex.substring(0,2), 16);
+  let prefix = 'P';
+  if ((fb & 0xC0) === 0x40) prefix = 'C';
+  else if ((fb & 0xC0) === 0x80) prefix = 'B';
+  else if ((fb & 0xC0) === 0xC0) prefix = 'U';
+  return prefix + ((fb >> 4) & 0x03) + (fb & 0x0F) + hex.substring(2);
 }
 
 function displayDTCs(codes) {
   dtcList.innerHTML = '';
   if (!codes.length) {
-    dtcList.innerHTML = '<p>✅ لا توجد أعطال مخزنة.</p>';
+    noDtcMsg.classList.remove('hidden');
+    dtcCountEl.textContent = '0';
     return;
   }
+  noDtcMsg.classList.add('hidden');
+  dtcCountEl.textContent = codes.length;
+  // حفظ في السجل
+  const timestamp = new Date().toLocaleString('ar-EG');
   codes.forEach(code => {
-    const info = obdCodes[code] || { en: 'Unknown code', ar: 'كود غير معروف' };
+    dtcHistory.unshift({ code, timestamp });
+    if (dtcHistory.length > 50) dtcHistory.pop();
+  });
+  localStorage.setItem('obdHistory', JSON.stringify(dtcHistory));
+
+  codes.forEach(code => {
+    const info = obdCodes[code] || { en: 'كود غير معروف', ar: 'كود غير معروف' };
     const div = document.createElement('div');
     div.className = 'dtc-item';
     div.innerHTML = `
       <div class="dtc-code">${code}</div>
-      <div class="desc-en">🇬🇧 ${info.en}</div>
-      <div class="desc-ar">🇸🇦 ${info.ar}</div>
-      <button class="search-btn" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(code + ' car repair solutions')}','_blank')">🔎 ابحث عن حلول</button>
+      <div class="desc-en"><i class="fas fa-language"></i> ${info.en}</div>
+      <div class="desc-ar"><i class="fas fa-language"></i> ${info.ar}</div>
+      <button class="search-btn" onclick="window.open('https://www.google.com/search?q=${encodeURIComponent(code + ' car repair')}','_blank')">
+        <i class="fas fa-search"></i> ابحث عن حلول
+      </button>
     `;
     dtcList.appendChild(div);
   });
 }
 
 function parseRPM(data) {
-  const match = data.match(/41 0C ([0-9A-F]{2}) ([0-9A-F]{2})/i);
-  if (match) {
-    const A = parseInt(match[1], 16);
-    const B = parseInt(match[2], 16);
-    const rpm = (A * 256 + B) / 4;
-    liveValue.innerHTML = `⏱️ ${Math.round(rpm)} RPM`;
+  const m = data.match(/41 0C ([0-9A-F]{2}) ([0-9A-F]{2})/i);
+  if (m) {
+    currentRPM = Math.round((parseInt(m[1],16)*256 + parseInt(m[2],16))/4);
+    rpmValue.textContent = currentRPM;
+    const angle = Math.min(360, (currentRPM / 8000) * 360);
+    rpmGauge.style.background = `conic-gradient(var(--accent-blue) ${angle}deg, #2a3a4a 0deg)`;
+    liveValues.innerHTML = `<p>سرعة المحرك: <strong>${currentRPM} RPM</strong></p>`;
   }
 }
 
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+// السجل
+function showHistory() {
+  historyList.innerHTML = dtcHistory.length ? dtcHistory.map(h => `<p><strong>${h.code}</strong> - ${h.timestamp}</p>`).join('') : '<p>لا يوجد سجل</p>';
+  historyModal.classList.remove('hidden');
 }
+refreshHistoryBtn.addEventListener('click', showHistory);
+closeHistoryBtn.addEventListener('click', () => historyModal.classList.add('hidden'));
+clearHistoryBtn.addEventListener('click', () => {
+  dtcHistory = [];
+  localStorage.removeItem('obdHistory');
+  showHistory();
+  showToast('تم مسح السجل', 'success');
+});
 
 connectBtn.addEventListener('click', connect);
 readDtcBtn.addEventListener('click', readDTCs);
-liveDataBtn.addEventListener('click', readLiveRPM);
+clearDtcBtn.addEventListener('click', clearDTCs);
+liveDataBtn.addEventListener('click', readLiveData);
 
-// ---------- آلية التحديث الصامت (مُعطَّلة مؤقتاً) ----------
-// ستُفعَّل بعد حل المشكلة
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
