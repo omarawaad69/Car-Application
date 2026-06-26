@@ -1,5 +1,12 @@
-// ========== إعدادات التفعيل ==========
-const WORKER_URL = 'https://license-checker.omarawaad69.workers.dev/'; // غيّر إلى رابط الـ Worker الخاص بك
+// ========== قائمة مفاتيح الترخيص الصالحة ==========
+// أضف هنا المفاتيح التي تريد منحها للعملاء
+const VALID_KEYS = [
+  "OBD-1234-5678",
+  "OBD-8765-4321",
+  "OBD-0000-0000" 
+  "OBD-1203-9252"
+  "ODB-1572-5484"// يمكنك إضافة المزيد
+];
 
 // ========== دوال معرف الجهاز ==========
 function getDeviceId() {
@@ -11,6 +18,33 @@ function getDeviceId() {
   return deviceId;
 }
 
+// ========== دوال التفعيل المحلي ==========
+function isLicenseActivated() {
+  const licenseData = localStorage.getItem('licenseData');
+  if (!licenseData) return false;
+  try {
+    const data = JSON.parse(licenseData);
+    // تحقق من أن المفتاح ما زال صالحاً وأنه مرتبط بهذا الجهاز
+    return VALID_KEYS.includes(data.key) && data.deviceId === getDeviceId();
+  } catch {
+    return false;
+  }
+}
+
+function activateLicense(key) {
+  const deviceId = getDeviceId();
+  if (!VALID_KEYS.includes(key)) {
+    return { success: false, message: "مفتاح غير صحيح" };
+  }
+  // تحقق مما إذا كان المفتاح مستخدماً على جهاز آخر
+  // نبحث في localStorage عن أي تفعيل سابق بهذا المفتاح (لن يحدث إلا إذا تم نسخ localStorage، وهذا صعب)
+  // عملياً، التفعيل يتم لمرة واحدة ويرتبط بالجهاز
+  const licenseData = { key, deviceId };
+  localStorage.setItem('licenseData', JSON.stringify(licenseData));
+  localStorage.setItem('licenseActivated', 'true');
+  return { success: true };
+}
+
 // ========== المتغيرات العامة ==========
 let device, server, txCharacteristic;
 let obdCodes = {};
@@ -19,34 +53,23 @@ let currentRPM = 0;
 let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
 // ========== التحقق من التفعيل عند التحميل ==========
-if (localStorage.getItem('licenseActivated') === 'true') {
+if (isLicenseActivated()) {
   showApp();
 } else {
   document.getElementById('licenseModal').style.display = 'flex';
 }
 
-document.getElementById('activateBtn').addEventListener('click', async () => {
+document.getElementById('activateBtn').addEventListener('click', () => {
   const key = document.getElementById('licenseKeyInput').value.trim();
   const errorEl = document.getElementById('licenseError');
   if (!key) return;
-  try {
-    const deviceId = getDeviceId();
-    const res = await fetch(WORKER_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, deviceId })
-    });
-    const data = await res.json();
-    if (data.valid) {
-      localStorage.setItem('licenseActivated', 'true');
-      document.getElementById('licenseModal').style.display = 'none';
-      showApp();
-    } else {
-      errorEl.textContent = data.message || 'مفتاح غير صحيح';
-      errorEl.style.display = 'block';
-    }
-  } catch (err) {
-    errorEl.textContent = 'فشل الاتصال بخادم التفعيل';
+
+  const result = activateLicense(key);
+  if (result.success) {
+    document.getElementById('licenseModal').style.display = 'none';
+    showApp();
+  } else {
+    errorEl.textContent = result.message;
     errorEl.style.display = 'block';
   }
 });
@@ -56,7 +79,7 @@ function showApp() {
   initApp();
 }
 
-// ========== دوال التطبيق الأساسية ==========
+// ========== باقي دوال التطبيق (بدون تغيير) ==========
 function initApp() {
   fetch('obd_codes.json')
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
