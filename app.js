@@ -1,6 +1,16 @@
 // ========== إعدادات التفعيل ==========
 const WORKER_URL = 'https://license-checker.omarawaad69.workers.dev/check-license'; // غيّر إلى رابط الـ Worker الخاص بك
 
+// ========== دوال معرف الجهاز ==========
+function getDeviceId() {
+  let deviceId = localStorage.getItem('deviceId');
+  if (!deviceId) {
+    deviceId = 'DEV-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+    localStorage.setItem('deviceId', deviceId);
+  }
+  return deviceId;
+}
+
 // ========== المتغيرات العامة ==========
 let device, server, txCharacteristic;
 let obdCodes = {};
@@ -20,10 +30,11 @@ document.getElementById('activateBtn').addEventListener('click', async () => {
   const errorEl = document.getElementById('licenseError');
   if (!key) return;
   try {
+    const deviceId = getDeviceId();
     const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key })
+      body: JSON.stringify({ key, deviceId })
     });
     const data = await res.json();
     if (data.valid) {
@@ -31,6 +42,7 @@ document.getElementById('activateBtn').addEventListener('click', async () => {
       document.getElementById('licenseModal').style.display = 'none';
       showApp();
     } else {
+      errorEl.textContent = data.message || 'مفتاح غير صحيح';
       errorEl.style.display = 'block';
     }
   } catch (err) {
