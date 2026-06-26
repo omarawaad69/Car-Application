@@ -1,10 +1,7 @@
-// ========== قائمة مفاتيح الترخيص (أضف المزيد كما تشاء) ==========
+// ========== قائمة مفاتيح الترخيص (اختبارية) ==========
 const VALID_KEYS = [
   "OBD-1234-5678",
-  "OBD-8765-4321",
-  "OBD-0054-0080" 
-  "OBD-1203-9252"
-  "ODB-1572-5484"
+  "TEST"
 ];
 
 // ========== دوال معرف الجهاز ==========
@@ -29,12 +26,13 @@ function isLicenseActivated() {
 
 function activateLicense(key) {
   if (!VALID_KEYS.includes(key)) {
-    return { success: false, message: "مفتاح غير صحيح" };
+    alert('المفتاح غير صحيح: ' + key);
+    return { success: false };
   }
   const deviceId = getDeviceId();
-  const licenseData = { key, deviceId };
-  localStorage.setItem('licenseData', JSON.stringify(licenseData));
+  localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
   localStorage.setItem('licenseActivated', 'true');
+  alert('تم التفعيل بنجاح!');
   return { success: true };
 }
 
@@ -45,11 +43,20 @@ let connected = false;
 let currentRPM = 0;
 let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
-// ========== بدء التطبيق ==========
-document.addEventListener('DOMContentLoaded', function() {
-  console.log('تم تحميل التطبيق بنجاح.');
+// ========== ربط زر التفعيل فور تحميل الصفحة ==========
+window.onload = function() {
+  alert('تم تحميل app.js'); // تأكيد أن الكود يعمل
 
-  // إخفاء شاشة التفعيل إذا كان مفعلاً مسبقاً
+  const activateBtn = document.getElementById('activateBtn');
+  const keyInput = document.getElementById('licenseKeyInput');
+  const errorEl = document.getElementById('licenseError');
+
+  if (!activateBtn || !keyInput) {
+    alert('عناصر HTML مفقودة');
+    return;
+  }
+
+  // التحقق من التفعيل المسبق
   if (isLicenseActivated()) {
     document.getElementById('licenseModal').style.display = 'none';
     showApp();
@@ -57,41 +64,32 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('licenseModal').style.display = 'flex';
   }
 
-  // ربط زر التفعيل (مع فحص وجوده)
-  const activateBtn = document.getElementById('activateBtn');
-  if (activateBtn) {
-    activateBtn.addEventListener('click', function() {
-      const keyInput = document.getElementById('licenseKeyInput');
-      const errorEl = document.getElementById('licenseError');
-      if (!keyInput) return;
-      const key = keyInput.value.trim();
-      if (!key) return;
+  // ربط زر التفعيل
+  activateBtn.addEventListener('click', function() {
+    alert('تم الضغط على تفعيل');
+    const key = keyInput.value.trim();
+    if (!key) return;
 
-      const result = activateLicense(key);
-      if (result.success) {
-        document.getElementById('licenseModal').style.display = 'none';
-        showApp();
-      } else {
-        errorEl.textContent = result.message;
-        errorEl.style.display = 'block';
-      }
-    });
-  } else {
-    console.error('زر التفعيل غير موجود!');
-  }
-});
+    const result = activateLicense(key);
+    if (result.success) {
+      document.getElementById('licenseModal').style.display = 'none';
+      showApp();
+    } else {
+      errorEl.style.display = 'block';
+    }
+  });
+};
 
 function showApp() {
   document.getElementById('appContent').style.display = 'block';
   initApp();
 }
 
-// ========== التطبيق الأساسي (بدون تغيير) ==========
 function initApp() {
   fetch('obd_codes.json')
-    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(r => r.json())
     .then(data => obdCodes = data)
-    .catch(err => showToast('فشل تحميل قاعدة البيانات: ' + err.message, 'error'));
+    .catch(err => console.log('فشل تحميل قاعدة البيانات'));
 
   const connectBtn = document.getElementById('connectBtn');
   const readDtcBtn = document.getElementById('readDtcBtn');
@@ -112,7 +110,7 @@ function initApp() {
     toast.className = `toast ${type}`;
     toast.textContent = msg;
     container.appendChild(toast);
-    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3000);
+    setTimeout(() => toast.remove(), 3000);
   }
 
   function updateConnectionUI(active) {
