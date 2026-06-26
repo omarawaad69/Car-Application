@@ -20,15 +20,10 @@ let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
 // ========== التحقق من التفعيل عند التحميل ==========
 if (localStorage.getItem('licenseActivated') === 'true') {
-  // التفعيل موجود مسبقًا، أخفِ واجهة التفعيل وأظهر التطبيق مباشرة
-  document.getElementById('licenseModal').style.display = 'none';
   showApp();
 } else {
-  // لم يتم التفعيل بعد، أظهر واجهة التفعيل
   document.getElementById('licenseModal').style.display = 'flex';
 }
-
-// ... يتبعه باقي الكود (دالة showApp و initApp وكل شيء)
 
 document.getElementById('activateBtn').addEventListener('click', async () => {
   const key = document.getElementById('licenseKeyInput').value.trim();
@@ -63,7 +58,6 @@ function showApp() {
 
 // ========== دوال التطبيق الأساسية ==========
 function initApp() {
-  // تحميل قاعدة البيانات
   fetch('obd_codes.json')
     .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(data => obdCodes = data)
@@ -82,7 +76,6 @@ function initApp() {
   const UART_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
   const TX_CHAR = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
 
-  // ========== دوال مساعدة ==========
   function showToast(msg, type = '') {
     const container = document.getElementById('toastContainer');
     const toast = document.createElement('div');
@@ -111,7 +104,6 @@ function initApp() {
     }
   }
 
-  // ========== اتصال البلوتوث ==========
   async function connect() {
     try {
       device = await navigator.bluetooth.requestDevice({
@@ -234,7 +226,6 @@ function initApp() {
     }
   }
 
-  // ========== السجل ==========
   function showHistory() {
     historyList.innerHTML = dtcHistory.length ? dtcHistory.map(h => `<p><strong>${h.code}</strong> - ${h.timestamp}</p>`).join('') : '<p>لا يوجد سجل</p>';
     historyModal.classList.remove('hidden');
@@ -248,7 +239,6 @@ function initApp() {
     showToast('تم مسح السجل', 'success');
   });
 
-  // ========== ربط الأزرار ==========
   connectBtn.addEventListener('click', connect);
   readDtcBtn.addEventListener('click', readDTCs);
   clearDtcBtn.addEventListener('click', clearDTCs);
