@@ -1,7 +1,10 @@
-// ========== قائمة مفاتيح الترخيص (اختبارية) ==========
+// ========== قائمة مفاتيح الترخيص ==========
 const VALID_KEYS = [
   "OBD-1234-5678",
-  "TEST"
+  "OBD-8765-4321",
+  "OBD-0054-0080", 
+  "OBD-1203-9252", 
+  "ODB-1572-5484" 
 ];
 
 // ========== دوال معرف الجهاز ==========
@@ -26,13 +29,12 @@ function isLicenseActivated() {
 
 function activateLicense(key) {
   if (!VALID_KEYS.includes(key)) {
-    alert('المفتاح غير صحيح: ' + key);
-    return { success: false };
+    return { success: false, message: "مفتاح غير صحيح" };
   }
   const deviceId = getDeviceId();
-  localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
+  const licenseData = { key, deviceId };
+  localStorage.setItem('licenseData', JSON.stringify(licenseData));
   localStorage.setItem('licenseActivated', 'true');
-  alert('تم التفعيل بنجاح!');
   return { success: true };
 }
 
@@ -43,53 +45,45 @@ let connected = false;
 let currentRPM = 0;
 let dtcHistory = JSON.parse(localStorage.getItem('obdHistory') || '[]');
 
-// ========== ربط زر التفعيل فور تحميل الصفحة ==========
-window.onload = function() {
-  alert('تم تحميل app.js'); // تأكيد أن الكود يعمل
+// ========== التحقق من التفعيل عند التحميل ==========
+if (isLicenseActivated()) {
+  // التفعيل موجود، إخفاء شاشة التفعيل وإظهار التطبيق
+  document.getElementById('licenseModal').style.display = 'none';
+  showApp();
+} else {
+  // لم يتم التفعيل، إظهار شاشة التفعيل
+  document.getElementById('licenseModal').style.display = 'flex';
+}
 
-  const activateBtn = document.getElementById('activateBtn');
+// ========== ربط زر التفعيل ==========
+document.getElementById('activateBtn').addEventListener('click', function() {
   const keyInput = document.getElementById('licenseKeyInput');
   const errorEl = document.getElementById('licenseError');
+  if (!keyInput) return;
+  const key = keyInput.value.trim();
+  if (!key) return;
 
-  if (!activateBtn || !keyInput) {
-    alert('عناصر HTML مفقودة');
-    return;
-  }
-
-  // التحقق من التفعيل المسبق
-  if (isLicenseActivated()) {
+  const result = activateLicense(key);
+  if (result.success) {
     document.getElementById('licenseModal').style.display = 'none';
     showApp();
   } else {
-    document.getElementById('licenseModal').style.display = 'flex';
+    errorEl.textContent = result.message;
+    errorEl.style.display = 'block';
   }
-
-  // ربط زر التفعيل
-  activateBtn.addEventListener('click', function() {
-    alert('تم الضغط على تفعيل');
-    const key = keyInput.value.trim();
-    if (!key) return;
-
-    const result = activateLicense(key);
-    if (result.success) {
-      document.getElementById('licenseModal').style.display = 'none';
-      showApp();
-    } else {
-      errorEl.style.display = 'block';
-    }
-  });
-};
+});
 
 function showApp() {
   document.getElementById('appContent').style.display = 'block';
   initApp();
 }
 
+// ========== دوال التطبيق الأساسية ==========
 function initApp() {
   fetch('obd_codes.json')
-    .then(r => r.json())
+    .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(data => obdCodes = data)
-    .catch(err => console.log('فشل تحميل قاعدة البيانات'));
+    .catch(err => showToast('فشل تحميل قاعدة البيانات: ' + err.message, 'error'));
 
   const connectBtn = document.getElementById('connectBtn');
   const readDtcBtn = document.getElementById('readDtcBtn');
@@ -110,7 +104,7 @@ function initApp() {
     toast.className = `toast ${type}`;
     toast.textContent = msg;
     container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 400); }, 3000);
   }
 
   function updateConnectionUI(active) {
