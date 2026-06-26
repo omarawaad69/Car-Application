@@ -2,37 +2,107 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>سيارة ذكية - كشف أعطال</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>OBD Pro | كشف أعطال السيارات</title>
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#0a0d14">
+  <!-- خطوط عربية -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <!-- Font Awesome للأيقونات -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-  <div class="container">
-    <h1>🚗 نظام تشخيص السيارة الذكي</h1>
-    <div class="card">
-      <button id="connectBtn" class="btn primary">🔵 اتصال بالسيارة</button>
-      <span id="status" class="status disconnected">غير متصل</span>
+  <!-- شريط التنقل العلوي -->
+  <nav class="navbar glass">
+    <div class="nav-brand">
+      <i class="fas fa-microchip"></i>
+      <span>OBD Pro</span>
+    </div>
+    <div class="nav-actions">
+      <button id="refreshHistoryBtn" class="icon-btn" title="السجل"><i class="fas fa-history"></i></button>
+    </div>
+  </nav>
+
+  <!-- الحاوية الرئيسية -->
+  <main class="container">
+    <!-- بطاقة الاتصال والمؤشرات -->
+    <div class="dashboard glass">
+      <div class="connection-card">
+        <div class="status-indicator">
+          <span id="ledIndicator" class="led offline"></span>
+          <span id="connectionText" class="status-text">غير متصل</span>
+        </div>
+        <button id="connectBtn" class="btn primary connect-btn">
+          <i class="fas fa-bluetooth"></i> اتصال بالسيارة
+        </button>
+      </div>
+
+      <div class="gauges">
+        <!-- عداد RPM دائري بسيط -->
+        <div class="gauge rpm-gauge">
+          <div class="gauge-circle" id="rpmGauge">
+            <div class="gauge-inner">
+              <span id="rpmValue">0</span>
+              <small>RPM</small>
+            </div>
+          </div>
+        </div>
+        <!-- ملخص الأخطاء -->
+        <div class="gauge dtc-summary">
+          <div class="gauge-circle error-circle">
+            <div class="gauge-inner">
+              <span id="dtcCount">0</span>
+              <small>خطأ</small>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="card">
-      <button id="readDtcBtn" class="btn" disabled>🔍 قراءة الأعطال</button>
-      <button id="liveDataBtn" class="btn" disabled>📊 بيانات حية (RPM)</button>
+    <!-- قسم الأوامر السريعة -->
+    <div class="action-buttons glass">
+      <button id="readDtcBtn" class="btn action-btn" disabled>
+        <i class="fas fa-search"></i> قراءة الأعطال
+      </button>
+      <button id="clearDtcBtn" class="btn action-btn clear-btn" disabled>
+        <i class="fas fa-eraser"></i> مسح الأعطال
+      </button>
+      <button id="liveDataBtn" class="btn action-btn" disabled>
+        <i class="fas fa-tachometer-alt"></i> بيانات حية
+      </button>
     </div>
 
-    <div id="dtcList" class="results"></div>
-    <div id="liveValue" class="live"></div>
+    <!-- قائمة الأعطال -->
+    <div id="dtcList" class="dtc-list"></div>
+    <!-- رسالة عدم وجود أعطال -->
+    <div id="noDtcMessage" class="no-dtc glass hidden">
+      <i class="fas fa-check-circle" style="color: #00ff88; font-size: 3rem;"></i>
+      <p>لا توجد أعطال مخزنة في وحدة التحكم.</p>
+    </div>
+
+    <!-- منطقة البيانات الحية (ستظهر أسفل) -->
+    <div id="liveDataPanel" class="live-panel glass hidden">
+      <h3><i class="fas fa-wave-square"></i> بيانات حية</h3>
+      <div id="liveValues" class="live-values"></div>
+    </div>
+  </main>
+
+  <!-- حاوية الإشعارات (Toasts) -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- نافذة منبثقة للسجل -->
+  <div id="historyModal" class="modal glass hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>سجل الأعطال السابقة</h3>
+        <button class="close-btn" id="closeHistoryBtn">&times;</button>
+      </div>
+      <div id="historyList" class="history-list"></div>
+      <button id="clearHistoryBtn" class="btn" style="margin-top: 15px; background: #c0392b;">مسح السجل</button>
+    </div>
   </div>
 
   <script src="app.js"></script>
-  <!-- تم تعطيل Service Worker مؤقتاً لتحديد سبب المشكلة -->
-  <!--
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
-  </script>
-  -->
 </body>
 </html>
