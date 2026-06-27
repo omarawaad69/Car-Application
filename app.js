@@ -25,7 +25,7 @@ function isLicenseActivated() {
 
 async function activateLicense(key) {
   const deviceId = getDeviceId();
-  if (!VALID_KEYS.includes(key)) return { success: false, message: "مفتاح غير صحيح" };
+  if (!key) return { success: false, message: "أدخل المفتاح" };
 
   try {
     const res = await fetch(WORKER_URL, {
@@ -42,11 +42,14 @@ async function activateLicense(key) {
       return { success: false, message: data.message || "مفتاح غير صحيح" };
     }
   } catch (err) {
-    // فشل الاتصال بالخادم -> تفعيل محلي مؤقت مع تحذير
-    console.error('تعذر الاتصال بالخادم، تفعيل محلي مؤقت', err);
-    localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
-    localStorage.setItem('licenseActivated', 'true');
-    return { success: true, offline: true };
+    console.error('تعذر الاتصال بالخادم، استخدام القائمة المحلية', err);
+    if (VALID_KEYS.includes(key)) {
+      localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
+      localStorage.setItem('licenseActivated', 'true');
+      return { success: true, offline: true };
+    } else {
+      return { success: false, message: "تعذر الاتصال بالخادم والمفتاح غير موجود محلياً" };
+    }
   }
 }
 
