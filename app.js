@@ -1,10 +1,11 @@
-// ========== قائمة مفاتيح الترخيص ==========
+// ========== رابط خادم الترخيص ==========
+const WORKER_URL = 'https://license-checker.عمال.workers.dev/check-license'; // ⚠️ استبدل "عمال" باسم حسابك
+
+// ========== قائمة مفاتيح الترخيص المحلية (احتياط) ==========
 const VALID_KEYS = [
   "OBD-1234-5678",
   "OBD-8765-4321",
-  "OBD-0054-0080", 
-  "OBD-1203-9252", 
-  "ODB-1572-5484" 
+  "OBD-0000-0000"
 ];
 
 // ========== دوال معرف الجهاز ==========
@@ -17,22 +18,36 @@ function getDeviceId() {
   return deviceId;
 }
 
-// ========== التفعيل المحلي ==========
+// ========== التفعيل عبر الخادم + احتياطي محلي ==========
 function isLicenseActivated() {
-  const licenseData = localStorage.getItem('licenseData');
-  if (!licenseData) return false;
-  try {
-    const data = JSON.parse(licenseData);
-    return VALID_KEYS.includes(data.key) && data.deviceId === getDeviceId();
-  } catch { return false; }
+  return localStorage.getItem('licenseActivated') === 'true';
 }
 
-function activateLicense(key) {
-  if (!VALID_KEYS.includes(key)) return { success: false, message: "مفتاح غير صحيح" };
+async function activateLicense(key) {
   const deviceId = getDeviceId();
-  localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
-  localStorage.setItem('licenseActivated', 'true');
-  return { success: true };
+  if (!VALID_KEYS.includes(key)) return { success: false, message: "مفتاح غير صحيح" };
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, deviceId })
+    });
+    const data = await res.json();
+    if (data.valid) {
+      localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
+      localStorage.setItem('licenseActivated', 'true');
+      return { success: true };
+    } else {
+      return { success: false, message: data.message || "مفتاح غير صحيح" };
+    }
+  } catch (err) {
+    // فشل الاتصال بالخادم -> تفعيل محلي مؤقت مع تحذير
+    console.error('تعذر الاتصال بالخادم، تفعيل محلي مؤقت', err);
+    localStorage.setItem('licenseData', JSON.stringify({ key, deviceId }));
+    localStorage.setItem('licenseActivated', 'true');
+    return { success: true, offline: true };
+  }
 }
 
 // ========== إعدادات اللغة ==========
@@ -181,11 +196,11 @@ if (isLicenseActivated()) {
   document.getElementById('licenseModal').style.display = 'flex';
 }
 
-document.getElementById('activateBtn').addEventListener('click', () => {
+document.getElementById('activateBtn').addEventListener('click', async () => {
   const key = document.getElementById('licenseKeyInput').value.trim();
   const errorEl = document.getElementById('licenseError');
   if (!key) return;
-  const result = activateLicense(key);
+  const result = await activateLicense(key);
   if (result.success) {
     document.getElementById('licenseModal').style.display = 'none';
     if (!localStorage.getItem('onboardingSeen')) {
@@ -194,7 +209,7 @@ document.getElementById('activateBtn').addEventListener('click', () => {
     }
     showApp();
   } else {
-    errorEl.textContent = t('invalidKey');
+    errorEl.textContent = result.message || t('invalidKey');
     errorEl.style.display = 'block';
   }
 });
@@ -211,7 +226,6 @@ function showApp() {
 function initApp() {
   fetch('obd_codes.json').then(r => r.json()).then(data => obdCodes = data).catch(() => {});
 
-  // عناصر DOM
   const connectBtn = document.getElementById('connectBtn');
   const readDtcBtn = document.getElementById('readDtcBtn');
   const clearDtcBtn = document.getElementById('clearDtcBtn');
@@ -420,7 +434,7 @@ function initApp() {
     el.innerHTML = `<strong>${value}</strong><small>${id}</small>`;
   }
 
-  // ========== السجل ==========
+  // السجل
   function showHistory() {
     historyList.innerHTML = dtcHistory.length ? dtcHistory.map(h => `<p><strong>${h.code}</strong> - ${h.timestamp}</p>`).join('') : '<p>لا يوجد سجل</p>';
     historyModal.classList.remove('hidden');
@@ -435,22 +449,20 @@ function initApp() {
   };
   refreshHistoryListBtn.onclick = showHistory;
 
-  // ========== الإعدادات ==========
+  // الإعدادات
   settingsBtn.onclick = () => settingsModal.classList.remove('hidden');
   closeSettingsBtn.onclick = () => settingsModal.classList.add('hidden');
-
   darkModeToggle.onchange = (e) => {
     localStorage.setItem('darkMode', e.target.checked);
     applyTheme();
   };
-
   langSelect.value = currentLang;
   langSelect.onchange = (e) => {
     currentLang = e.target.value;
     applyLanguage();
   };
 
-  // ========== تصدير تقرير الأعطال ==========
+  // تصدير التقرير
   exportReportBtn.onclick = () => {
     if (!currentDTCs.length) {
       showToast('لا توجد أعطال لتصديرها', 'error');
@@ -471,14 +483,12 @@ function initApp() {
     showToast('تم تصدير التقرير', 'success');
   };
 
-  // ========== ربط الأزرار ==========
   connectBtn.addEventListener('click', connect);
   readDtcBtn.addEventListener('click', readDTCs);
   clearDtcBtn.addEventListener('click', clearDTCs);
   liveDataBtn.addEventListener('click', readLiveData);
   reconnectBtn.addEventListener('click', connect);
 
-  // ========== تطبيق اللغة والثيم ==========
   applyLanguage();
   applyTheme();
 }
