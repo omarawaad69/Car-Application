@@ -1,5 +1,5 @@
 // ========== رابط خادم الترخيص ==========
-const WORKER_URL = 'https://license-checker.عمال.workers.dev/check-license'; // ⚠️ استبدل "عمال" باسم حسابك
+const WORKER_URL = 'https://license-checker.omarawaad69.workers.dev/check-license'; // ⚠️ استبدل "عمال" باسم حسابك
 
 // ========== قائمة مفاتيح الترخيص المحلية (احتياط) ==========
 const VALID_KEYS = [
